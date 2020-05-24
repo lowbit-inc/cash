@@ -1,0 +1,241 @@
+#!/usr/bin/env bash
+
+###########
+# Account #
+###########
+
+accountAdd() {
+  
+  if [ $2 ]; then
+    thisAccountName=$1
+    thisInitialBalance=$2
+  else
+    logPrint error "Missing account information"
+    exit 1
+  fi
+
+  echo "${thisAccountName}:${thisInitialBalance}:${thisInitialBalance}" >> "${databaseAccounts}"
+  systemCheckReturnCode "New account '${thisAccountName}' added" "Failed to add new account"
+}
+
+accountParse() {
+
+  if [ $1 ]; then
+    usrOperation=$1
+    shift
+  else
+    accountShowUsage
+  fi
+
+  case "${usrOperation}" in
+
+    "add")
+      logPrint debug "Operation => ${usrOperation}"
+      accountAdd "${@}"
+      ;;
+    *)
+      logPrint error "Unknown operation '${usrOperation}'"
+      ;;
+
+  esac
+
+}
+
+accountShowUsage() {
+  
+  echo -e "${colorBold}${colorUnderline}Account${colorReset}"
+  echo
+  echo -e "${colorBold}${colorLightGreen}Usage:${colorReset}"
+  echo -e "  ${colorBold}`basename $0` account ${colorLightMagenta}operation${colorReset} ${colorDim}[${colorReset}${colorLightYellow}args${colorReset}${colorDim}]${colorReset}"
+  echo
+  echo -e "${colorBold}${colorLightGreen}Operations:${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}add${colorReset} ${colorLightYellow}account_name initial_balance${colorReset} ${colorDim}- Add a new account${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}delete${colorReset} ${colorLightYellow}account_name${colorReset}              ${colorDim}- Delete an account${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}list${colorReset}                             ${colorDim}- List all accounts${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}rename${colorReset} ${colorLightYellow}old_name new_name${colorReset}         ${colorDim}- Rename an account${colorReset}"
+  echo
+  exit 0
+
+}
+
+#########
+# Color #
+#########
+
+colorReset="\e[0m"
+colorBold="\e[1m"
+colorDim="\e[2m"
+colorUnderline="\e[4m"
+colorBlink="\e[5m"
+colorRed="\e[31m"
+colorGreen="\e[32m"
+colorYellow="\e[33m"
+colorBlue="\e[34m"
+colorMagenta="\e[35m"
+colorCyan="\e[36m"
+colorLightGray="\e[37m"
+colorDarkGray="\e[90m"
+colorLightRed="\e[91m"
+colorLightGreen="\e[92m"
+colorLightYellow="\e[93m"
+colorLightBlue="\e[94m"
+colorLightMagenta="\e[95m"
+colorLightCyan="\e[96m"
+
+############
+# Database #
+############
+
+databasePath="${HOME}/.lowbit-cash"
+databaseAccounts="${databasePath}/accounts.db"
+databaseEnvelopes="${databasePath}/envelopes.db"
+databaseTransactions="${databasePath}/transaction.db"
+
+databaseCheckIfExists() {
+  if [ -d "${databasePath}" ]; then
+    logPrint debug "Database found at => ${databasePath}"
+  else
+    logPrint info "Database not found - Creating one at [${databasePath}]"
+    databaseCreate
+  fi
+}
+
+databaseCreate() {
+  mkdir -p "${databasePath}"      ; systemCheckReturnCode "Initializing database"
+  touch "${databaseAccounts}"     ; systemCheckReturnCode "Initializing table: accounts"
+  touch "${databaseEnvelopes}"    ; systemCheckReturnCode "Initializing table: envelopes"
+  touch "${databaseTransactions}" ; systemCheckReturnCode "Initializing table: transactions"
+}
+
+#######
+# Log #
+#######
+
+logPrint() {
+  thisLogLevel="${1}"
+  thisLogString="${2}"
+
+  case $thisLogLevel in
+
+    "debug")
+      thisLogLevelColored="${colorDarkGray}debug${colorReset}"
+      ;;
+    "error")
+      thisLogLevelColored="${colorLightRed}error${colorReset}"
+      ;;
+    "info")
+      thisLogLevelColored="${colorLightGreen}info ${colorReset}"
+      ;;
+    "user")
+      thisLogLevelColored="${colorBlink}${colorLightMagenta}user ${colorReset}"
+      ;;
+    "warn")
+      thisLogLevelColored="${colorLightYellow}warn ${colorReset}"
+      ;;
+
+    *)
+      echo "Error: Wrong log type"
+      ;;
+
+  esac
+
+  echo -e "${colorDarkGray}[`date +'%Y-%m-%d %H:%M:%S'`${colorDarkGray}] [${thisLogLevelColored}${colorDarkGray}]${colorReset} ${thisLogString}"
+}
+
+logTest() {
+  logPrint debug "Test message"
+  logPrint info "Test message"
+  logPrint warn "Test message"
+  logPrint error "Test message"
+  logPrint user "Test message"
+}
+
+##########
+# Syntax #
+##########
+
+syntaxShow() {
+
+  echo -e "${colorBold}${colorUnderline}Lowbit Cash - Bash Edition${colorReset}"
+  echo
+  echo -e "${colorBold}${colorLightGreen}Usage:${colorReset}"
+  echo -e "  ${colorBold}`basename $0` ${colorLightMagenta}command${colorReset} ${colorDim}[${colorReset}${colorLightYellow}operation${colorReset} ${colorDim}[${colorReset}${colorLightCyan}args${colorReset}${colorDim}]]${colorReset}"
+  echo -e "  ${colorBold}`basename $0`${colorReset} help"
+  echo -e "  ${colorBold}`basename $0`${colorReset} version"
+  echo
+  echo -e "${colorBold}${colorLightGreen}Basic commands:${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}account${colorReset}   ${colorDim}- Account operations${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}config${colorReset}    ${colorDim}- User config${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}edit${colorReset}      ${colorDim}- Manual modifications${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}envelope${colorReset}  ${colorDim}- Envelope operations${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}sync${colorReset}      ${colorDim}- Database sync using Git${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}transfer${colorReset}  ${colorDim}- Transfer operations${colorReset}"
+  echo
+  echo -e "${colorBold}${colorLightGreen}Interactive commands:${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}plan${colorReset}      ${colorDim}- Plan mode${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}do${colorReset}        ${colorDim}- Execution mode${colorReset}"
+  echo
+  echo -e "${colorBold}${colorLightGreen}System commands:${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}--install${colorReset} ${colorDim}- Install this script in /usr/local/bin${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}--link${colorReset}    ${colorDim}- Create a link to this script in /usr/local/bin${colorReset}"
+  echo -e "  ${colorBold}${colorLightMagenta}--update${colorReset}  ${colorDim}- Update to the latest stable version${colorReset}"
+  echo
+  exit 0
+}
+
+##########
+# System #
+##########
+
+systemCheckReturnCode() {
+
+  thisRC=$?
+  thisStringOK="${1}"
+  thisStringError="${2}"
+
+  if [ $thisRC -eq 0 ]; then
+    logPrint info "${thisStringOK}"
+  else
+    logPrint error "${thisStringError}"
+    exit 1
+  fi
+
+}
+
+systemLink() {
+
+  if [ -h /usr/local/bin/cash ]; then
+    logPrint info "The symbolic link already exists"
+  else
+    logPrint info "Creating a symbolic link to this script"
+    logPrint user "You will be prompted to your 'sudo' password"
+    sudo ln -s `realpath $0` /usr/local/bin/cash  ; systemCheckReturnCode "Symbolic link creation"
+  fi
+
+}
+
+##########
+# Script #
+##########
+
+if [ $1 ]; then
+  usrCommand=$1
+else
+  syntaxShow
+fi
+
+case "${usrCommand}" in
+  "account")
+    logPrint debug "Command => ${usrCommand}"
+    shift
+    databaseCheckIfExists ; accountParse "${@}"
+    ;;
+  "--link")
+    logPrint debug "Command => ${usrCommand}"
+    systemLink
+    ;;
+  *)
+    logPrint error "Unknown command '${usrCommand}'"
+    exit 1
+    ;;
+esac
